@@ -1,0 +1,61 @@
+import pandas as pd
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import io
+
+st.set_page_config(page_title="UTS Penalaran Komputer - Project 3", layout="wide")
+
+st.title("📊 UTS Penalaran Komputer - Project 3")
+st.markdown("Visualisasi dan Analisis Data Prediksi Kinerja Akademik Mahasiswa")
+
+# Load CSV
+df = pd.read_csv("./../Student_performance_data_.csv")
+
+# Salin data untuk transformasi (mapping + normalisasi)
+df_processed = df.copy()
+
+# Mapping dictionary
+gender_map = {0: "Male", 1: "Female"}
+ethnicity_map = {0: "Caucasian", 1: "African American", 2: "Asian", 3: "Other"}
+parental_education_map = {0: "None", 1: "High School", 2: "Some College", 3: "Bachelor's", 4: "Higher"}
+parental_support_map = {0: "None", 1: "Low", 2: "Moderate", 3: "High", 4: "Very High"}
+extracurricular_map = {0: "No", 1: "Yes"}
+sports_map = {0: "No", 1: "Yes"}
+music_map = {0: "No", 1: "Yes"}
+volunteering_map = {0: "No", 1: "Yes"}
+gradeclass_map = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'F'}
+tutoring_map = {0: 'No', 1: 'Yes'}
+
+# Terapkan mapping
+df_processed['Gender'] = df_processed['Gender'].map(gender_map)
+df_processed['Ethnicity'] = df_processed['Ethnicity'].map(ethnicity_map)
+df_processed['ParentalEducation'] = df_processed['ParentalEducation'].map(parental_education_map)
+df_processed['ParentalSupport'] = df_processed['ParentalSupport'].map(parental_support_map)
+df_processed['Extracurricular'] = df_processed['Extracurricular'].map(extracurricular_map)
+df_processed['Sports'] = df_processed['Sports'].map(sports_map)
+df_processed['Music'] = df_processed['Music'].map(music_map)
+df_processed['Volunteering'] = df_processed['Volunteering'].map(volunteering_map)
+df_processed['GradeClass'] = df_processed['GradeClass'].map(gradeclass_map)
+df_processed['Tutoring'] = df_processed['Tutoring'].map(tutoring_map)
+
+
+with st.expander("📊 Dataset dan Variabel - Preprocessing Dataset"):
+    # Tampilkan data tabel interaktif
+    st.subheader("📋 Data Mahasiswa")
+    st.dataframe(df_processed, use_container_width=True)
+
+    # Visualisasi distribusi GradeClass
+    st.subheader("📈 Distribusi Kelas Nilai (GradeClass)")
+    grade_counts = df_processed["GradeClass"].value_counts().sort_index()
+    st.bar_chart(grade_counts)
+
+    # Visualisasi distribusi Gender
+    st.subheader("📈 Distribusi Jenis Kelamin (Gender)")
+    grade_counts = df_processed["Gender"].value_counts().sort_index()
+    st.bar_chart(grade_counts)
+
+# (Opsional) Statistik deskriptif
+with st.expander("📊 Statistik Deskriptif"):
+    st.dataframe(df.describe(), use_container_width=True)
