@@ -553,14 +553,14 @@ if selected == "Testing":
     st.markdown("---")
 
     # Load model dan inference
-    with open('./models/bn/model_bn.pkl', 'rb') as model_file:
+    with open('./models/BN/model_bn.pkl', 'rb') as model_file:
         model_bn = pickle.load(model_file)
 
-    with open('./models/bn/inference_bn.pkl', 'rb') as inference_file:
+    with open('./models/BN/inference_bn.pkl', 'rb') as inference_file:
         inference_bn = pickle.load(inference_file)
 
     # Load fitur yang harus ada
-    with open('./models/bn/features_bn.pkl', 'rb') as f:
+    with open('./models/BN/features_bn.pkl', 'rb') as f:
         features_bn = pickle.load(f)
     feature_columns = features_bn.columns.tolist()
 
