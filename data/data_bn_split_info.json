@@ -1,0 +1,26 @@
+{
+    "column_use": [
+        "ParentalSupport",
+        "GradeClass",
+        "Absences",
+        "StudyTimeWeekly_Disc",
+        "ParentalEducation",
+        "GPA_Disc",
+        "Extracurricular",
+        "Tutoring"
+    ],
+    "train_size": 1913,
+    "test_size": 479,
+    "feature_columns": [
+        "ParentalSupport",
+        "Absences",
+        "StudyTimeWeekly_Disc",
+        "ParentalEducation",
+        "Extracurricular",
+        "Tutoring"
+    ],
+    "target_columns": [
+        "GPA_Disc",
+        "GradeClass"
+    ]
+}

@@ -1,0 +1,617 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+import networkx as nx
+import numpy as np
+import pickle
+import json
+import joblib
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.calibration import calibration_curve
+
+
+
+import streamlit as st
+from streamlit_option_menu import option_menu
+
+st.set_page_config(
+    page_title="Bayesian Network",
+    page_icon="📊",
+    layout="wide"
+)
+
+data_bn = pd.read_csv("./data/data_normalization.csv")
+data_bn.head()
+
+with st.sidebar:
+    selected = option_menu(
+        menu_title="MODEL",
+        options=["Struktur BN",
+                 "Feature dan Split",
+                 "CPT",
+                 "Inferensi Probabilistik",
+                 "Analisis Kausal",
+                 "Analisis Intervensi",
+                 "Clustering Mahasiswa",
+                 "Evaluasi Model",
+                 "Validasi Model",
+                 "Testing"],
+    )
+
+
+if selected == "Struktur BN":
+    st.title("Struktur Bayesian Network")
+    st.write("Edges")
+
+    with st.echo():
+        edges_bn = [
+            ('ParentalEducation', 'StudyTimeWeekly_Disc'),
+            ('StudyTimeWeekly_Disc', 'GPA_Disc'),
+            ('ParentalSupport', 'GPA_Disc'),
+            ('Tutoring', 'GPA_Disc'),
+            ('Extracurricular', 'GPA_Disc'),
+            ('Absences', 'GPA_Disc'),
+            ('GPA_Disc', 'GradeClass')
+        ]
+
+    st.markdown("---")
+    st.write("Visualisasi Struktur Bayesian Network")
+    # Membuat Directed Graph dari edges yang sudah didefinisikan
+    model = nx.DiGraph()
+    model.add_edges_from(edges_bn)
+
+    # 4. Visualisasi struktur jaringan
+    plt.figure(figsize=(12, 8))
+    pos = nx.spring_layout(model)  # Posisi node menggunakan layout spring
+    nx.draw(model, pos=pos, with_labels=True, node_size=4000, node_color='skyblue',
+            font_size=10, font_weight='bold', arrowsize=20)
+    plt.title("Bayesian Network Structure for GPA Prediction (with Continuous Variables)", fontsize=14)
+    st.pyplot(plt)
+
+
+if selected == "Feature dan Split":
+    st.title("Feature dan Split")
+
+    with open("./data/data_bn_split_info.json", "r") as f:
+        loaded_info_bn_fs = json.load(f)
+    
+    st.write("### Kolom Yang Dipakai")
+    st.write(loaded_info_bn_fs["column_use"])
+
+    st.markdown("---")
+    st.write("### Split Data")
+    code_fs = '''
+        # --- Split data menjadi training dan testing ---
+        train_features, test_features, train_target, test_target = train_test_split(
+            features_bn,
+            target_data,
+            test_size=0.2,
+            random_state=42,
+            stratify=data_bn['GradeClass']
+        )
+
+        # Gabungkan fitur dan target jadi satu dataframe
+        train_data_bn = train_features.copy()
+        train_data_bn['GPA_Disc'] = train_target['GPA_Disc']
+        train_data_bn['GradeClass'] = train_target['GradeClass']
+
+        test_data_bn = test_features.copy()
+        test_data_bn['GPA_Disc'] = test_target['GPA_Disc']
+        test_data_bn['GradeClass'] = test_target['GradeClass']
+    '''
+    st.code(code_fs, language='python')
+    st.markdown("---")
+
+    st.write("### Check Result")
+    st.write(f"Training Set Size : `{loaded_info_bn_fs["train_size"]}`")
+    st.write(f"Testing Set Size : `{loaded_info_bn_fs["test_size"]}`")
+    st.write(f"Fitur yang digunakan : `{loaded_info_bn_fs["feature_columns"]}` ")
+    st.write(f"Target : `{loaded_info_bn_fs["target_columns"]}` ")
+
+
+if selected == "CPT":
+    st.write("### Conditional Probability Table (CPT)")
+
+    with open('./models/BN/model_bn.pkl', 'rb') as model_file:
+        model_bn = pickle.load(model_file)
+
+    code_model_bn = '''
+    # Membuat model jaringan
+    model_bn = BayesianNetwork(edges_bn)
+
+    # Estimasi parameter (CPT) dengan menggunakan data training
+    # Menggunakan estimator BayesianEstimator
+    model_bn.fit(train_data_bn, estimator=BayesianEstimator, prior_type='BDeu', equivalent_sample_size=5)
+    '''
+    st.code(code_model_bn, language='python')
+    st.markdown("---")
+    
+    # --- Menampilkan CPT untuk setiap variabel dalam jaringan ---
+    for cpd in model_bn.get_cpds():
+        st.write(f"\nCPT untuk {cpd.variable}:")
+        st.write(cpd)
+        st.write("")
+
+if selected == "Inferensi Probabilistik":
+    st.write("### Inferensi Probabilistik")
+
+    with open("./data/inference_bn_info.json", "r") as f:
+        loaded_inference_info = json.load(f)
+    
+    code_inference = '''
+    # Langkah 5: Lakukan inferensi dengan data test
+    inference = VariableElimination(model_bn)
+
+    # Simpan hasil prediksi
+    predictions_gpa_disc = []
+    predictions_grade_class = []
+
+    # Lakukan prediksi untuk setiap baris data di test_data_bn
+    for i in range(len(test_data_bn)):
+        # Pastikan hanya menggunakan fitur relevan (tanpa target)
+        evidence = test_data_bn.iloc[i].drop(['GPA_Disc', 'GradeClass'])
+
+        # Prediksi distribusi probabilitas untuk 'GPA_Disc'
+        gpa_disc_prob = inference.query(variables=['GPA_Disc'], evidence=evidence)
+        predictions_gpa_disc.append(gpa_disc_prob.values.argmax())  # Ambil nilai dengan probabilitas tertinggi
+
+        # Prediksi distribusi probabilitas untuk 'GradeClass'
+        grade_class_prob = inference.query(variables=['GradeClass'], evidence=evidence)
+        predictions_grade_class.append(grade_class_prob.values.argmax())  # Ambil nilai dengan probabilitas tertinggi
+
+    # Ubah GradeClass jadi angka
+    true_gpa_disc = test_data_bn['GPA_Disc'].astype(int)
+    true_grade_class = test_data_bn['GradeClass'].astype(int)
+
+    # Sekarang baru bisa hitung
+    gpa_disc_accuracy = accuracy_score(true_gpa_disc, predictions_gpa_disc)
+    grade_class_accuracy = accuracy_score(true_grade_class, predictions_grade_class)
+    '''
+
+    st.code(code_inference, language='python')
+    st.markdown("---")
+    
+    st.write(f"Akurasi Prediksi GPA_Disc: `{loaded_inference_info["gpa_acc"] * 100:.2f}%`")
+    st.write(f"Akurasi Prediksi GradeClass: `{loaded_inference_info["gradeclass_acc"] * 100:.2f}%`")
+
+if selected == "Analisis Kausal":
+    st.write("### Analisis Kausal")
+
+
+if selected == "Analisis Intervensi":
+    st.write("### Analisis Intervensi")
+
+if selected == "Clustering Mahasiswa":
+    st.write("### Clustering Mahasiswa")
+
+    data_clean_1 = pd.read_csv("./data/data_clean_1.csv")
+    data_clean_2 = pd.read_csv("./data/data_clean_2.csv")
+    features_bn_cls = ['Age', 'StudyTimeWeekly', 'Absences', 'Tutoring', 'ParentalSupport', 'Extracurricular', 'Sports', 'Music', 'Volunteering']
+
+    plt.figure(figsize=(8,6))
+    plt.scatter(data_clean_1['StudyTimeWeekly'], data_clean_1['Absences'], c=data_clean_1['Cluster'], cmap='viridis')
+    plt.xlabel('StudyTimeWeekly')
+    plt.ylabel('Absences')
+    plt.title('Clustering Mahasiswa Berdasarkan Profil Performa')
+    plt.grid(True)
+    st.pyplot(plt)
+    st.markdown("---")
+
+    st.write("Rata-rata tiap cluster berdasarkan fitur:")
+    st.write(data_clean_2.groupby('Cluster')[features_bn_cls].mean())
+
+
+if selected == "Evaluasi Model":
+    st.write("### Evaluasi Model")
+
+    with st.sidebar:
+        sub_selected = option_menu(
+            menu_title="",
+            options=["GPA (MAE, RMSE), GradeClass (Akurasi, Presisi, Recall), AUC",
+                     "Kalibrasi Probabilistik"],
+        )
+    
+    if sub_selected == "GPA (MAE, RMSE), GradeClass (Akurasi, Presisi, Recall), AUC":
+        with open("./data/evaluasi_model_bn_wosh.json", "r") as f:
+            em_wosh = json.load(f)
+        
+        st.markdown("---")
+        st.write("#### Evaluasi Model untuk GPA (MAE, RMSE)")
+        st.write(f"MAE: `{em_wosh["gpa_mae"] * 100:.2f}%`")
+        st.write(f"RMSE: `{em_wosh["gpa_rmse"] * 100:.2f}%`")
+        st.write("Nilai Mean Absolute Error (MAE) sebesar `38%` menunjukkan bahwa rata-rata kesalahan prediksi terhadap GPA_Disc relatif rendah. Sementara itu, Root Mean Squared Error (RMSE) sebesar `81%` mengindikasikan bahwa secara keseluruhan prediksi model cukup akurat, meskipun terdapat beberapa kesalahan prediksi yang lebih besar.")
+
+        st.markdown("---")
+        st.write("#### Evaluasi Model untuk GradeClass (Akurasi, Presisi, Recall, AUC)")
+        st.write(f"Akurasi: `{em_wosh["gradeclass_akurasi"] * 100:.2f}%`")
+        st.write(f"Presisi: `{em_wosh["gradeclass_presisi"] * 100:.2f}%`")
+        st.write(f"Recall: `{em_wosh["gradeclass_recall"] * 100:.2f}%`")
+        st.write("Berdasarkan persentase tersebut, model berhasil memprediksi GradeClass dengan akurasi `64,30%`. Presisi sebesar `64,93%` menunjukkan bahwa prediksi `benar` model cukup konsisten. Recall `64,30%` berarti model mampu menangkap sebagian besar data dengan tepat.")
+
+        st.markdown("---")
+        st.write("Area Under ROC Curve (AUC) untuk klasifikasi performa")
+        st.write(f"GPA AUC: `{em_wosh["gpa_auc"] * 100:.2f}%`")
+        st.write(f"GradeClass AUC: `{em_wosh["gradeclass_auc"] * 100:.2f}%`")
+        st.write("Berdasarkan persentase tersebut, AUC GradeClass`81%` dan AUC GPA `90%` menandakan performa klasifikasi model cukup baik untuk GradeClass dan Sangat Baik untuk GPA dalam membedakan kelas.")
+
+
+    if sub_selected == "Kalibrasi Probabilistik":
+        st.markdown("---")
+        st.write("### Kalibrasi Probabilistik GradeClass")
+
+        # Load kembali
+        prob_pred = joblib.load("./data/prob_pred_gradeclass.pkl")
+        test_gradeclass = pd.read_csv("./data/test_gradeclass.csv").squeeze()  # Squeeze untuk Series
+        lb = joblib.load("./data/label_binarizer_gradeclass.pkl")
+
+        # Ubah label asli ke bentuk biner
+        test_grade_class_bin = lb.transform(test_gradeclass)
+
+        # --- Kalibrasi Multi-Kelas ---
+        plt.figure(figsize=(10, 6))
+        for i in range(prob_pred.shape[1]):
+            prob_true, prob_pred_class = calibration_curve(test_grade_class_bin[:, i], prob_pred[:, i], n_bins=10)
+            plt.plot(prob_pred_class, prob_true, marker='o', label=f'Class {i}', color=plt.cm.jet(i / prob_pred.shape[1]))
+
+        plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
+        plt.xlabel('Predicted Probability')
+        plt.ylabel('True Probability')
+        plt.title('Kalibrasi Probabilistik untuk GradeClass (Multi-Kelas)')
+        plt.legend()
+        st.pyplot(plt)
+
+        # --- Kalibrasi Kelas Tertentu (misal kelas 1) ---
+        y_true_bin = (test_gradeclass == 1).astype(int)
+        prob_pred_class1 = prob_pred[:, 1]
+
+        prob_true, prob_pred_class1_calib = calibration_curve(y_true_bin, prob_pred_class1, n_bins=10)
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(prob_pred_class1_calib, prob_true, marker='o', label='Model', color='blue')
+        plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
+        plt.xlabel('Predicted Probability')
+        plt.ylabel('True Probability')
+        plt.title('Kalibrasi Probabilistik untuk GradeClass (Kelas 1 vs Lainnya)')
+        plt.legend()
+        st.pyplot(plt)
+
+
+        st.write("Grafik-grafik kurva kalibrasi probabilistik ini digunakan untuk model prediksi GradeClass, baik dalam skenario multi-kelas maupun biner. Pada grafik multi-kelas, masing-masing kelas dibandingkan dengan garis kalibrasi sempurna; semakin dekat ke garis diagonal, semakin baik model mengestimasi probabilitas kelas tersebut. Pada grafik biner (Kelas 1 vs Lainnya), model tampak sedikit under-confident pada probabilitas rendah dan over-confident pada probabilitas tinggi, menunjukkan kalibrasi yang kurang ideal terutama pada prediksi tinggi.")
+
+
+        st.markdown("---")
+        st.write("### Kalibrasi Probabilistik GPA")
+
+        # Load kembali
+        prob_pred_gpa = joblib.load("./data/prob_pred_gpa.pkl")
+        test_gpa_disc = pd.read_csv("./data/test_gpa_disc.csv").squeeze()
+        lb = joblib.load("./data/label_binarizer_gpa.pkl")
+
+        # Binarisasi ulang label
+        test_gpa_disc_bin = lb.transform(test_gpa_disc)
+
+        # --- Kalibrasi Multi-Kelas ---
+        plt.figure(figsize=(10, 6))
+
+        for i in range(prob_pred_gpa.shape[1]):
+            prob_true, prob_pred_class = calibration_curve(test_gpa_disc_bin[:, i], prob_pred_gpa[:, i], n_bins=10)
+            plt.plot(prob_pred_class, prob_true, marker='o', label=f'Class {i}', color=plt.cm.jet(i / prob_pred_gpa.shape[1]))
+
+        plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
+        plt.xlabel('Predicted Probability')
+        plt.ylabel('True Probability')
+        plt.title('Kalibrasi Probabilistik untuk GPA_Disc (Multi-Kelas)')
+        plt.legend()
+        st.pyplot(plt)
+
+
+        # --- Kalibrasi Kelas Tertentu (misal kelas 1) ---
+        y_true_bin = (test_gpa_disc == 1).astype(int)
+        prob_pred_class1_gpa = prob_pred_gpa[:, 1]
+
+        prob_true, prob_pred_class1_gpa_calib = calibration_curve(y_true_bin, prob_pred_class1_gpa, n_bins=10)
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(prob_pred_class1_gpa_calib, prob_true, marker='o', label='Model', color='blue')
+        plt.plot([0, 1], [0, 1], linestyle='--', color='gray')
+        plt.xlabel('Predicted Probability')
+        plt.ylabel('True Probability')
+        plt.title('Kalibrasi Probabilistik untuk GPA_Disc (Kelas 1 vs Lainnya)')
+        plt.legend()
+        st.pyplot(plt)
+
+        st.write("Grafik-grafik kurva kalibrasi probabilistik ini digunakan untuk model prediksi GPA_Disc, baik dalam skenario multi-kelas maupun biner. Pada kalibrasi multi-kelas, model menunjukkan variasi performa antar kelas, dengan beberapa kelas seperti Class 1 cukup terkalibrasi di probabilitas rendah-menengah, sementara kelas lain seperti Class 0 dan Class 4 mengalami over-confidence atau under-confidence di berbagai rentang. Pada kalibrasi biner (Class 1 vs Lainnya), model tampak cukup baik di rentang probabilitas 0.3–0.75, namun mengalami under-confidence pada prediksi rendah dan over-confidence signifikan pada prediksi tinggi.")
+
+
+if selected == "Validasi Model":
+    st.write("### Validasi Model")
+    
+
+    with st.sidebar:
+        sub_selected = option_menu(
+            menu_title="",
+            options=["K-fold Cross-Validation",
+                     "Sensitivity Analysis",
+                     "Memberi Rekomendasi",
+                     "Comparison Dengan Baseline Model"],
+        )
+    
+    if sub_selected == "K-fold Cross-Validation":
+        st.markdown("---")
+        st.write("#### K-fold Cross-Validation")
+        
+        with open("./data/k_fold_bn_info.json", "r") as k_fold_bn:
+            k_fold_bn = json.load(k_fold_bn)
+    
+
+        st.markdown("---")
+        st.write("### Hasil evaluasi model menggunakan K-fold cross-validation (GPA):")
+        st.write(f"Cross-validation MAE untuk GPA_Disc: `{k_fold_bn["mean_mae_gpa"]:.3f}` ± `{k_fold_bn["std_mae_gpa"]:.3f}`")
+        st.write(f"Cross-validation RMSE untuk GPA_Disc: `{k_fold_bn["mean_rmse_gpa"]:.3f}` ± `{k_fold_bn["std_rmse_gpa"]:.3f}`")
+
+        st.write("Hasil cross-validation menunjukkan bahwa model memiliki MAE rata-rata sebesar 0.119 dan RMSE rata-rata sebesar 0.402 untuk prediksi GPA_Disc, dengan variasi (standar deviasi) yang kecil. Ini menandakan bahwa kesalahan prediksi model relatif rendah dan stabil di berbagai lipatan data.")
+
+        st.markdown("---")
+        st.write("### Hasil evaluasi model menggunakan K-fold cross-validation (GradeClass):")
+        st.write(f"Cross-validation MAE untuk GradeClass: `{k_fold_bn["mean_mae_grade_class"]:.3f}` ± `{k_fold_bn["std_mae_grade_class"]:.3f}`")
+        st.write(f"Cross-validation RMSE untuk GradeClass: `{k_fold_bn["mean_rmse_grade_class"]:.3f}` ± `{k_fold_bn["std_rmse_grade_class"]:.3f}`")
+
+        st.write("Hasil cross-validation menunjukkan MAE rata-rata 0.147 dan RMSE rata-rata 0.611 untuk prediksi GradeClass, dengan variasi yang masih cukup kecil. Ini menunjukkan bahwa model cukup konsisten, meskipun tingkat kesalahan prediksinya sedikit lebih tinggi dibandingkan prediksi GPA_Disc.")
+
+
+    if sub_selected == "Sensitivity Analysis":
+        st.markdown("---")
+        st.write("#### Sensitivity Analysis")
+
+        # Baca hasil kembali
+        loaded_sensitivity_df = pd.read_csv("./data/sensitivity_analysis_results_bn.csv")
+
+        with st.expander("Code"):
+            code_sa_bn = '''
+            # Variabel untuk menyimpan hasil sensitivitas
+            sensitivity_results = []
+
+            # Sensitivity Analysis terhadap Parameter Model
+            prior_types = ['BDeu', 'K2']
+            equivalent_sample_sizes = [5, 10, 20]
+
+            for prior in prior_types:
+                for ess in equivalent_sample_sizes:
+                    model_val = BayesianNetwork(edges_bn)
+                    model_val.fit(train_data_bn, estimator=BayesianEstimator, prior_type=prior, equivalent_sample_size=ess)
+
+                    inference = VariableElimination(model_val)
+
+                    predictions_gpa_disc_sens = []
+                    for i in range(len(test_data_bn)):
+                        evidence = test_data_bn.iloc[i].drop(['GPA_Disc', 'GradeClass']).to_dict()
+                        gpa_disc_prob = inference.query(variables=['GPA_Disc'], evidence=evidence)
+                        predictions_gpa_disc_sens.append(gpa_disc_prob.values.argmax())
+
+                    mae_sens = mean_absolute_error(true_gpa_disc, predictions_gpa_disc_sens)
+                    print(f"MAE dengan prior_type={prior}, equivalent_sample_size={ess}: {mae_sens:.2f}")
+
+                    # Simpan hasil untuk analisis sensitivitas
+                    sensitivity_results.append((f'prior={prior}, ess={ess}', mae_sens))
+            '''
+            st.code(code_sa_bn, language='python')
+            
+        st.markdown("---")
+
+        # Buat plot
+        plt.figure(figsize=(10, 6))
+        ax = sns.barplot(data=loaded_sensitivity_df, x="Parameter", y="MAE", palette="viridis")
+        plt.xticks(rotation=45)
+        plt.title("Sensitivity Analysis: MAE untuk Setiap Parameter")
+        plt.ylabel("Mean Absolute Error")
+        plt.xlabel("Parameter Setting")
+
+        # Tambahkan label nilai di atas tiap bar
+        for p in ax.patches:
+            height = p.get_height()
+            ax.text(
+                x=p.get_x() + p.get_width() / 2,
+                y=height + 0.01,
+                s=f"{height:.2f}",
+                ha='center',
+                va='bottom',
+                fontsize=10,
+                fontweight='bold'
+            )
+
+        plt.tight_layout()
+        st.pyplot(plt)
+
+
+        st.write("Hasil menunjukkan bahwa perubahan prior type (BDeu atau K2) dan nilai equivalent sample size (5, 10, 20) tidak mempengaruhi MAE, yang tetap stabil di angka 0.38. Ini menandakan model cukup robust terhadap variasi parameter ini.")
+
+
+    if sub_selected == "Memberi Rekomendasi":
+        st.markdown("---")
+        st.write("#### Memberi Rekomendasi")
+        loaded_sensitivity_df = pd.read_csv("./data/sensitivity_analysis_results_bn.csv")
+
+        with st.expander("Code"):
+            code_m_r_bn = '''
+            # Fungsi untuk memberikan rekomendasi berdasarkan hasil sensitivitas
+            def give_recommendations(sensitivity_results):
+                # Menentukan nilai MAE terbaik
+                best_mae = min(sensitivity_results, key=lambda x: x[1])
+                print(f"Rekomendasi: Menggunakan kombinasi {best_mae[0]} memberikan MAE terbaik dengan nilai {best_mae[1]:.2f}.")
+
+            # Panggil fungsi untuk memberikan rekomendasi
+            give_recommendations(sensitivity_results)
+            '''
+            st.code(code_m_r_bn, language='python')
+
+        st.markdown("---")
+        # Fungsi untuk memberikan rekomendasi berdasarkan hasil sensitivitas
+        def give_recommendations(sensitivity_results):
+            # Menentukan nilai MAE terbaik
+            best_mae = min(sensitivity_results, key=lambda x: x[1])
+            st.write(f"Rekomendasi: Menggunakan kombinasi `{best_mae[0]}` memberikan MAE terbaik dengan nilai `{best_mae[1]:.2f}`.")
+
+        # Ubah DataFrame menjadi list of tuples
+        sensitivity_results = list(loaded_sensitivity_df.itertuples(index=False, name=None))
+
+        # Panggil fungsi rekomendasi
+        give_recommendations(sensitivity_results)
+
+
+    if sub_selected == "Comparison Dengan Baseline Model":
+        st.markdown("---")
+        st.write("#### Comparison Dengan Baseline Model")
+        st.markdown("---")
+
+        # Load data dari file JSON
+        with open("./data/comparison_bn.json", "r") as f:
+            load_comp_bn = json.load(f)
+
+        with open("./data/evaluasi_model_bn_wosh.json", "r") as f:
+            em_wosh = json.load(f)
+
+        # --- 1. Perbandingan Regresi (MAE & RMSE) --- #
+        st.subheader("📊 Perbandingan Model Regresi: GPA_Disc")
+
+        # Data
+        models_reg = ["Bayesian Network", "Linear Regression"]
+        mae_scores = [em_wosh["gpa_mae"] * 100, load_comp_bn["lr_mae"] * 100]
+        rmse_scores = [em_wosh["gpa_rmse"] * 100, load_comp_bn["lr_rmse"] * 100]
+
+        # Plot MAE dan RMSE
+        fig, ax = plt.subplots(1, 2, figsize=(10, 4))
+        bar_colors = ['#1f77b4', '#ff7f0e']
+
+        # MAE
+        ax[0].bar(models_reg, mae_scores, color=bar_colors)
+        for i, val in enumerate(mae_scores):
+            ax[0].text(i, val + 0.5, f'{val:.2f}%', ha='center')
+        ax[0].set_title("MAE (%)")
+        ax[0].set_ylim(0, max(mae_scores)*1.2)
+
+        # RMSE
+        ax[1].bar(models_reg, rmse_scores, color=bar_colors)
+        for i, val in enumerate(rmse_scores):
+            ax[1].text(i, val + 0.5, f'{val:.2f}%', ha='center')
+        ax[1].set_title("RMSE (%)")
+        ax[1].set_ylim(0, max(rmse_scores)*1.2)
+
+        st.pyplot(fig)
+
+        # Penjelasan Regresi
+        st.markdown(f"""
+        **Analisis:**
+        - *Bayesian Network* menghasilkan MAE sebesar `{mae_scores[0]:.2f}%` dan RMSE `{rmse_scores[0]:.2f}%`, menunjukkan performa yang cukup stabil.
+        - *Linear Regression* memiliki nilai MAE `{mae_scores[1]:.2f}%` dan RMSE `{rmse_scores[1]:.2f}%`, yang berarti kesalahan rata-rata prediksinya lebih tinggi, meskipun deviasi error-nya (RMSE) sedikit lebih kecil.
+        - Dengan performa numerik yang relatif kompetitif dan tambahan keunggulan dalam interpretabilitas serta reasoning probabilistik, Bayesian Network layak dipertimbangkan sebagai model regresi yang seimbang antara akurasi dan transparansi.
+        """)
+
+        st.markdown("---")
+
+        # --- 2. Perbandingan Klasifikasi (Akurasi & AUC) --- #
+        st.subheader("📊 Perbandingan Model Klasifikasi: GradeClass")
+
+        models_cls = ["Bayesian Network", "Random Forest"]
+        accuracy_scores = [em_wosh["gradeclass_akurasi"] * 100 if "gradeclass_akurasi" in em_wosh else None,
+                        load_comp_bn["rf_accuracy"] * 100]
+
+        auc_scores = [em_wosh["gradeclass_auc"] * 100, load_comp_bn["rf_auc"] * 100]
+
+        # Plot Akurasi dan AUC
+        fig2, ax2 = plt.subplots(1, 2, figsize=(10, 4))
+
+        # Accuracy
+        ax2[0].bar(models_cls, accuracy_scores, color=bar_colors)
+        for i, val in enumerate(accuracy_scores):
+            ax2[0].text(i, val + 0.5, f'{val:.2f}%', ha='center')
+        ax2[0].set_title("Akurasi (%)")
+        ax2[0].set_ylim(0, max(accuracy_scores)*1.2)
+
+        # AUC
+        ax2[1].bar(models_cls, auc_scores, color=bar_colors)
+        for i, val in enumerate(auc_scores):
+            ax2[1].text(i, val + 0.5, f'{val:.2f}%', ha='center')
+        ax2[1].set_title("AUC (%)")
+        ax2[1].set_ylim(0, max(auc_scores)*1.2)
+
+        st.pyplot(fig2)
+
+        # Penjelasan Klasifikasi
+        st.markdown(f"""
+        **Analisis:**
+        - *Bayesian Network* menunjukkan AUC sebesar `{auc_scores[0]:.2f}%`, sementara *Random Forest* mencetak AUC `{auc_scores[1]:.2f}%` dengan akurasi `{accuracy_scores[1]:.2f}%`.
+        - Jika interpretabilitas dan probabilistik reasoning dibutuhkan, *Bayesian Network* bisa lebih cocok.
+        - Jika tujuan utama adalah prediksi kelas secara akurat, maka Random Forest bisa menjadi pilihan yang lebih baik. 
+        - Sebaliknya, jika dibutuhkan kemampuan interpretasi probabilistik dan pemodelan hubungan antar variabel, maka Bayesian Network lebih unggul karena memberikan representasi yang lebih transparan dan explainable.
+        """)
+
+
+if selected == "Testing":
+    st.title("Testing Model")
+    st.markdown("---")
+
+    # Load model dan inference
+    with open('./models/bn/model_bn.pkl', 'rb') as model_file:
+        model_bn = pickle.load(model_file)
+
+    with open('./models/bn/inference_bn.pkl', 'rb') as inference_file:
+        inference_bn = pickle.load(inference_file)
+
+    # Load fitur yang harus ada
+    with open('./models/bn/features_bn.pkl', 'rb') as f:
+        features_bn = pickle.load(f)
+    feature_columns = features_bn.columns.tolist()
+
+    # State names dari model
+    state_names = {
+        'StudyTimeWeekly_Disc': [0, 1, 2, 3],
+        'ParentalEducation': [0, 1, 2, 3, 4],
+        'Absences': [0, 1, 2, 3, 4],
+        'ParentalSupport': [0, 1, 2, 3, 4],
+        'Extracurricular': [0, 4],
+        'Tutoring': [0, 4]
+    }
+
+    # Fungsi validasi
+    def validate_evidence(evidence_input):
+        for feature, value in evidence_input.items():
+            valid_states = state_names.get(feature)
+            if valid_states:
+                if not isinstance(value, int):
+                    value = int(value)
+                if value not in valid_states:
+                    raise ValueError(f"Nilai '{value}' untuk fitur '{feature}' tidak valid. Pilih dari {valid_states}")
+        return evidence_input
+
+    # Fungsi prediksi
+    def predict_gpa_and_grade(evidence_input):
+        evidence_input = validate_evidence(evidence_input)
+        gpa_result = inference_bn.query(variables=['GPA_Disc'], evidence=evidence_input)
+        gpa_pred = gpa_result.values.argmax()
+        evidence_with_gpa = evidence_input.copy()
+        evidence_with_gpa['GPA_Disc'] = gpa_pred
+        grade_result = inference_bn.query(variables=['GradeClass'], evidence=evidence_with_gpa)
+        grade_pred = grade_result.values.argmax()
+        return gpa_pred, grade_pred
+
+    # Input interaktif Streamlit
+    st.header("Input Data untuk Prediksi")
+    evidence_input = {
+        'StudyTimeWeekly_Disc': st.selectbox("Waktu Belajar per Minggu (0=Sedikit, 3=Banyak)", state_names['StudyTimeWeekly_Disc'], index=0),
+        'ParentalEducation': st.selectbox("Tingkat Pendidikan Orang Tua (0:None, 1:HighSc, 2:College, 3:Bachelor, 4:Hhigher)", state_names['ParentalEducation'], index=1),
+        'Absences': st.selectbox("Absensi (0-4)", state_names['Absences'], index=1),
+        'ParentalSupport': st.selectbox("Dukungan Orang Tua (0=Tidak ada, 4=Sangat tinggi)", state_names['ParentalSupport'], index=1),
+        'Extracurricular': st.radio("Ikut Ekstrakurikuler?", options=state_names['Extracurricular'], index=0, format_func=lambda x: "Tidak" if x == 0 else "Ya"),
+        'Tutoring': st.radio("Ikut Les/Tutoring?", options=state_names['Tutoring'], index=0, format_func=lambda x: "Tidak" if x == 0 else "Ya"),
+    }
+
+    # Tombol prediksi
+    if st.button("Prediksi"):
+        try:
+            predicted_gpa, predicted_grade_class = predict_gpa_and_grade(evidence_input)
+            st.success(f"Prediksi GPA_Disc: `{predicted_gpa}`")
+            st.success(f"Prediksi GradeClass: `{predicted_grade_class}`")
+        except ValueError as e:
+            st.error(str(e))

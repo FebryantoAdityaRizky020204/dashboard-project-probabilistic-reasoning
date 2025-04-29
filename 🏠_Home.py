@@ -24,6 +24,11 @@ if selected == "TEAMS":
         "Nama" : ["Yunisa Nur Safa", "Willy Azrieel", "Aditya Rizky Febryanto", "Novita Maria", "Milky Gratia Br Sitorus", "Melda Nia Yuliani", "Dectrixie Theodore Mayumi S."],
         "NIM" : ["223020503078", "223020503101", "223020503108", "223020503109", "223020503116", "223020503119", "223020503140"]
     })
+
+    # Reset index dan mulai dari 1
+    namaKelompok = namaKelompok.reset_index(drop=True)
+    namaKelompok.index = namaKelompok.index + 1
+
     st.table(namaKelompok)
 
 if selected == "ABOUT PROJECT":
