@@ -181,7 +181,99 @@ if selected == "Analisis Kausal":
 
 
 if selected == "Analisis Intervensi":
-    st.write("### Analisis Intervensi")
+    st.write("### Analisis Intervensi (what-if analysis)")
+
+    with st.expander("Code"):
+        code_bn_anaint = '''
+        # Fungsi untuk What-If Analysis
+        def what_if_analysis(inference, evidence, target_variable, var_to_change, new_value, model):
+            modified_evidence = evidence.copy()
+
+            # Mendapatkan status valid untuk variabel dari model
+            valid_states = model.get_cpds(var_to_change).state_names[var_to_change]  # Menggunakan state_names untuk status variabel
+
+            # Periksa jika new_value valid
+            if new_value not in valid_states:
+                raise ValueError(f"Nilai {new_value} tidak valid untuk variabel {var_to_change}. Valid states: {valid_states}")
+
+            modified_evidence[var_to_change] = new_value
+            modified_prob = inference.query(variables=[target_variable], evidence=modified_evidence)
+            return modified_prob
+
+        # Contoh: What-if Analysis untuk Absences (menggunakan angka 4 untuk status "High")
+        what_if_result = what_if_analysis(inference, evidence, 'GPA_Disc', 'Absences', 4, model_bn)  # Menggunakan 4 sebagai status "High"
+        print("Hasil What-If Analysis untuk Absences = 4 (High):", what_if_result)
+        '''
+        st.code(code_bn_anaint, language='python')
+
+    st.markdown("---")
+
+    st.title("📊 What-If Analysis dengan Bayesian Network")
+
+    # Load model dari file lokal
+    with open('./models/BN/model_bn.pkl', 'rb') as model_file:
+        model_bn = pickle.load(model_file)
+
+    with open('./models/BN/inference_bn.pkl', 'rb') as inference_file:
+        inference_bn = pickle.load(inference_file)
+
+    with open('./models/BN/features_bn.pkl', 'rb') as f:
+        features_bn = pickle.load(f)
+
+    # Fungsi What-If
+    def what_if_analysis(inference, evidence, target_variable, var_to_change, new_value, model):
+        modified_evidence = evidence.copy()
+        valid_states = model.get_cpds(var_to_change).state_names[var_to_change]
+        if new_value not in valid_states:
+            raise ValueError(f"Nilai {new_value} tidak valid untuk variabel {var_to_change}. Valid states: {valid_states}")
+        modified_evidence[var_to_change] = new_value
+        modified_prob = inference.query(variables=[target_variable], evidence=modified_evidence)
+        return modified_prob
+
+    # Ambil nama fitur dan state dari model
+    feature_columns = features_bn.columns.tolist()
+    state_names = {cpd.variable: cpd.state_names[cpd.variable] for cpd in model_bn.get_cpds()}
+
+    st.success("✅ Semua file berhasil dimuat!")
+
+    st.markdown("### Input Evidence Awal")
+
+    # Input evidence awal dari user
+    evidence_input = {}
+    for col in feature_columns:
+        options = state_names.get(col, [0, 1])
+        evidence_input[col] = st.selectbox(
+            f"{col}", 
+            options, 
+            index=0, 
+            format_func=lambda x: f"Status {x}"
+        )
+
+    st.markdown("### What-If Analysis")
+
+    # Pilih variabel dan nilai baru
+    var_to_change = st.selectbox("Variabel yang ingin diubah", feature_columns)
+    new_val_options = state_names[var_to_change]
+    new_val = st.selectbox(f"Ubah nilai '{var_to_change}' menjadi:", new_val_options)
+
+    target_variable = st.selectbox("Target yang dianalisis", ['GPA_Disc', 'GradeClass'])
+
+    if st.button("🔍 Jalankan What-If Analysis"):
+        try:
+            result = what_if_analysis(
+                inference=inference_bn,
+                evidence=evidence_input,
+                target_variable=target_variable,
+                var_to_change=var_to_change,
+                new_value=new_val,
+                model=model_bn
+            )
+            st.success(f"Hasil probabilitas {target_variable} jika `{var_to_change} = {new_val}`:")
+            st.json({k: float(v) for k, v in zip(result.state_names[target_variable], result.values)})
+        except Exception as e:
+            st.error(f"Terjadi kesalahan: {e}")
+
+
 
 if selected == "Clustering Mahasiswa":
     st.write("### Clustering Mahasiswa")
