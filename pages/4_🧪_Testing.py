@@ -100,26 +100,92 @@ if selected == "Bayesian Network":
             st.error(str(e))
 
 if selected == "Naive Bayes Classifier":
-    # Contoh fitur dari dataset sebelumnya (ubah sesuai dataset kamu)
-    feature_variables = ['Semester', 'IPK_SemesterSebelumnya', 'Kehadiran', 'Tugas', 'Kedisiplinan']
+    # Kolom yang digunakan sebagai fitur input
+    feature_variables = [
+        'StudentID', 'Age', 'Gender', 'Ethnicity', 'ParentalEducation', 
+        'Absences', 'Tutoring', 'ParentalSupport', 'Extracurricular', 
+        'Sports', 'Music', 'Volunteering', 'StudyTimeWeekly_Disc'
+    ]
 
-    # Buat template input (1 baris data)
-    input_template = pd.DataFrame([{col: 0 for col in feature_variables}])
+    # Kolom evidence yang dibutuhkan model Bayesian
+    evidence_columns = [
+        'StudyTimeWeekly_Disc', 'ParentalEducation', 'Absences',
+        'ParentalSupport', 'Extracurricular', 'Tutoring'
+    ]
+
+    # Load data dummy awal
+    data_test = pd.read_csv("./data/data_dummy_test.csv")
+    data_test['Hapus'] = False
+    columns_order = ['Hapus'] + feature_variables
+    template_df = data_test[columns_order]
 
     # Tampilkan editor
-    input_df = st.data_editor(input_template, num_rows="fixed", use_container_width=True)
-    st.dataframe(input_df)
+    st.subheader("Input Data Uji")
+    st.write("Data dummy `data_dummy_test.csv`")
+    input_df = st.data_editor(
+        template_df,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="data_editor_hapus"
+    )
 
-    # Discretizer jika digunakan
-    # asumsikan sudah didefinisikan: `discretizer_nbc`
+    # Filter baris yang tidak dihapus
+    if not input_df.empty:
+        input_df['Hapus'] = input_df['Hapus'].fillna(False)
+        cleaned_df = input_df[input_df['Hapus'] == False].drop(columns='Hapus')
+    else:
+        st.warning("Belum ada data yang valid untuk diproses.")
+        st.stop()
+
+    # Load model Bayesian Network
     with open('./models/BN/model_bn.pkl', 'rb') as model_file:
         model_bn = pickle.load(model_file)
 
+    # Fungsi prediksi per baris
+    def predict_per_row(model, evidence_dict):
+        # Gunakan model.predict() untuk memprediksi nilai target
+        gpa_pred = model.predict(pd.DataFrame([evidence_dict]))["GPA_Disc"].iloc[0]
+        grade_pred = model.predict(pd.DataFrame([evidence_dict]))["GradeClass"].iloc[0]
+        return gpa_pred, grade_pred
+
+
     # Tombol prediksi
     if st.button("Prediksi"):
+        prediction_results = []
+
+        for _, row in cleaned_df.iterrows():
+            try:
+                # Ambil nilai evidence dari baris saat ini
+                evidence_input = {col: int(row[col]) for col in evidence_columns}
+                gpa_pred, grade_pred = predict_per_row(model_bn, evidence_input)
+                prediction_results.append({
+                    "StudentID": row["StudentID"],
+                    "Predicted_GPA_Disc": gpa_pred,
+                    "Predicted_GradeClass": grade_pred
+                })
+            except Exception as e:
+                st.error(f"Kesalahan pada StudentID {row['StudentID']}: {e}")
+
+
+        if prediction_results:
+            result_df = pd.DataFrame(prediction_results)
+            st.subheader("Hasil Prediksi Bayesian Network")
+            st.dataframe(result_df)
+        else:
+            st.warning("Tidak ada hasil prediksi yang valid.")
+
+
+
+
+
+
+
+
+
+
         # Lakukan transformasi diskritisasi
-        from pgmpy.inference import VariableElimination
-        inference = VariableElimination(model_bn)
-        evidence_dict = input_df.iloc[0].to_dict()
-        query_result = inference.query(variables=["GPA_Disc"], evidence=evidence_dict)
-        st.write(query_result)
+        # from pgmpy.inference import VariableElimination
+        # inference = VariableElimination(model_bn)
+        # evidence_dict = input_df.iloc[0].to_dict()
+        # query_result = inference.query(variables=["GPA_Disc"], evidence=evidence_dict)
+        # st.write(query_result)
