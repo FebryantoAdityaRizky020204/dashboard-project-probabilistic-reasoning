@@ -22,9 +22,6 @@ st.set_page_config(
     layout="wide"
 )
 
-data_n = pd.read_csv("./data/data_normalization.csv")
-st.dataframe(data_n)
-
 # Kolom yang digunakan sebagai fitur input
 feature_variables = [
     'StudentID', 'Age', 'Gender', 'Ethnicity', 'ParentalEducation', 
@@ -66,11 +63,11 @@ else:
 with open('./models/BN/model_bn.pkl', 'rb') as model_file:
     model_bn = pickle.load(model_file)
 
-with open('./models/NBC/model_gpa_disc_nbc', 'rb') as model_file_gpa_disc:
+with open('./models/NBC/model_gpa_disc_nbc.pkl', 'rb') as model_file_gpa_disc:
     model_gpa_nbc = pickle.load(model_file_gpa_disc)
 
-with open('./models/NBC/model_gpa_disc_nbc', 'rb') as model_file_gradeclass_disc:
-    model_gpa_nbc = pickle.load(model_file_gradeclass_disc)
+with open('./models/NBC/model_grade_class_nbc.pkl', 'rb') as model_file_gradeclass_disc:
+    model_gradeclass_nbc = pickle.load(model_file_gradeclass_disc)
 
 # Fungsi prediksi per baris
 def predict_per_row(model, evidence_dict):
