@@ -58,7 +58,7 @@ with st.sidebar:
                  "Split Data",
                  "Model Dan CPT",
                  "Inferensi",
-                 "Analisis Sensitifitas",
+                 "Analisis Kausalitas",
                  "Evaluasi Model",
                  "Validasi Model"],
     )
@@ -282,9 +282,6 @@ if selected == "Inferensi":
     model_gpa_disc_nbc.fit(X_train_nbc, y_gpa_disc_train_nbc)
 
     with st.echo():
-        # Menghapus kolom 'StudentID'
-        X_train_nbc = X_train_nbc.drop(columns=['StudentID'])
-        X_test_nbc = X_test_nbc.drop(columns=['StudentID'])
 
         # Gunakan KBinsDiscretizer untuk mendiskritisasi
         discretizer_nbc = KBinsDiscretizer(n_bins=5, encode='ordinal', strategy='uniform')
@@ -326,8 +323,8 @@ if selected == "Inferensi":
         st.metric(label="Akurasi GradeClass", value=f"{grade_class_accuracy * 100:.2f}%")
         st.text_area("Classification Report GradeClass", grade_class_class_report, height=200)
 
-if selected == "Analisis Sensitifitas":
-    st.write("### Analisis Sensitifitas")
+if selected == "Analisis Kausalitas":
+    st.write("### Analisis Kausalitas")
     
     plt.figure(figsize=(12, 8))
     sns.heatmap(data_nbc.corr()[['GPA_Disc']].sort_values(by='GPA_Disc', ascending=False), annot=True, cmap="coolwarm")

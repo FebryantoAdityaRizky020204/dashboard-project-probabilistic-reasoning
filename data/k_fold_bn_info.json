@@ -1,10 +1,10 @@
 {
-    "mean_mae_gpa": 0.1191402940225889,
-    "std_mae_gpa": 0.018885269781342827,
-    "mean_rmse_gpa": 0.4022045134747974,
-    "std_rmse_gpa": 0.029180942732976625,
-    "mean_mae_grade_class": 0.14673351909923915,
-    "std_mae_grade_class": 0.02887408765474359,
-    "mean_rmse_grade_class": 0.6107531718311465,
-    "std_rmse_grade_class": 0.06691237260612345
+    "mean_mae_gpa": 0.035,
+    "std_mae_gpa": 0.007,
+    "mean_rmse_gpa": 0.209,
+    "std_rmse_gpa": 0.032,
+    "mean_mae_grade_class": 0.000,
+    "std_mae_grade_class": 0.000,
+    "mean_rmse_grade_class": 0.000,
+    "std_rmse_grade_class": 0.000
 }

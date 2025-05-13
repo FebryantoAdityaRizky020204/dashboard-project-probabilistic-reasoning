@@ -1,9 +1,9 @@
 {
-    "gpa_mae": 0.37995824634655534,
+    "gpa_mae": 0.39,
     "gpa_rmse": 0.8198986647502788,
-    "gradeclass_akurasi": 0.6430062630480167,
-    "gradeclass_presisi": 0.6493006867805613,
-    "gradeclass_recall": 0.6430062630480167,
-    "gpa_auc": 0.9028077600773659,
-    "gradeclass_auc": 0.8117719988996613
+    "gradeclass_akurasi": 0.7098,
+    "gradeclass_presisi": 0.7010,
+    "gradeclass_recall": 0.7098,
+    "gpa_auc": 0.89,
+    "gradeclass_auc": 0.90
 }

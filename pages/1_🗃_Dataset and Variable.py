@@ -167,50 +167,39 @@ if selected == "PREPROCESSING":
 
         st.write("")
         st.write("#### Kolom GPA dan StudyTimeWeekly")
-        st.dataframe(data[["GPA", "StudyTimeWeekly"]].head())
+        st.dataframe(data[["GPA", "StudyTimeWeekly", "Absences"]].head())
 
 
         st.markdown("---")
-        st.write('#### Diskretisasi Kolom GPA dan StudyTimeWeekly')
+        st.write('#### Diskretisasi Kolom GPA, StudyTimeWeekly dan Absences')
         code_discrit_1 = '''
-        gpa_bins = [0, 2.0, 2.5, 3.0, 3.5, float('inf')]
-        gpa_labels = [4, 3, 2, 1, 0]
+        # Bins dan labels untuk diskretisasi GPA dan StudyTimeWeekly
+        gpa_bins = [0, 2.0, 2.5, 3.0, 3.5, float('inf')]  # Bins harus monoton meningkat
+        gpa_labels = [4, 3, 2, 1, 0]  # Label untuk setiap bin GPA
 
-        study_bins = [0, 5, 10, 15, float('inf')]
-        study_labels = [0, 1, 2, 3]
+        study_bins = [0, 5, 10, 15, float('inf')]  # Bins untuk StudyTimeWeekly
+        study_labels = [0, 1, 2, 3]  # Label untuk setiap bin StudyTimeWeekly
+
+        # Tentukan bins untuk Absences dengan rentang 0-30
+        absences_bins = [0, 6, 12, 18, 24, 30]
+        absences_labels = [0, 1, 2, 3, 4]  # Label 0-4
+
 
         # Terapkan pd.cut untuk diskretisasi
-        data_normalization['GPA_Disc'] = pd.cut(data_normalization['GPA'], bins=gpa_bins, labels=gpa_labels, right=False)
-        data_normalization['StudyTimeWeekly_Disc'] = pd.cut(data_normalization['StudyTimeWeekly'], bins=study_bins, labels=study_labels, right=False)
+        data_normalization['GPA_Disc'] = pd.cut(data_normalization['GPA'], bins=gpa_bins, labels=gpa_labels, right=False).astype(int)
+        data_normalization['StudyTimeWeekly_Disc'] = pd.cut(data_normalization['StudyTimeWeekly'], bins=study_bins, labels=study_labels, right=False).astype(int)
+        data_normalization['Absences'] = pd.cut(data_normalization['Absences'], bins=absences_bins, labels=absences_labels, right=False).astype(int)
+
         '''
         st.code(code_discrit_1, language='python')
 
         # Tampilkan hasil diskretisasi
         st.write("##### RESULT")
-        st.table(data_normalization[['GPA_Disc', 'StudyTimeWeekly_Disc']].head())
+        st.table(data_normalization[['GPA_Disc', 'StudyTimeWeekly_Disc', "Absences"]].head())
 
         st.write("\n")
         st.markdown("---")
         st.write("\n")
-
-        st.write('#### Diskretisasi Semua Kolom Selain StudyTimeWeekly_Disc dan GPA_Disc')
-        code_discrit_2 = '''
-        # Drop kolom asli yang sudah didiskritkan
-        data_normalization = data_normalization.drop(["GPA", "StudyTimeWeekly"], axis=1)
-
-        # Pisahkan fitur numerik yang perlu didiskritkan
-        numerical_features_to_discretize = [col for col in data_normalization.columns if col not in ['GPA_Disc', 'StudyTimeWeekly_Disc']]
-
-        # Diskretisasi sisa fitur yang belum diskrit (gunakan KBinsDiscretizer untuk fitur lainnya)
-        discretizer = KBinsDiscretizer(n_bins=5, encode='ordinal', strategy='uniform')
-        data_normalization[numerical_features_to_discretize] = discretizer.fit_transform(data_normalization[numerical_features_to_discretize])
-
-        # Ubah ke int
-        data_normalization[numerical_features_to_discretize] = data_normalization[numerical_features_to_discretize].astype(int)
-        '''
-        st.code(code_discrit_2, language='python')
-        st.write("##### RESULT")
-        st.dataframe(data_normalization.head(5))
 
         st.write("\n")
         st.markdown("---")
