@@ -98,3 +98,28 @@ if selected == "Bayesian Network":
             st.success(f"Prediksi GradeClass: `{predicted_grade_class}`")
         except ValueError as e:
             st.error(str(e))
+
+if selected == "Naive Bayes Classifier":
+    # Contoh fitur dari dataset sebelumnya (ubah sesuai dataset kamu)
+    feature_variables = ['Semester', 'IPK_SemesterSebelumnya', 'Kehadiran', 'Tugas', 'Kedisiplinan']
+
+    # Buat template input (1 baris data)
+    input_template = pd.DataFrame([{col: 0 for col in feature_variables}])
+
+    # Tampilkan editor
+    input_df = st.data_editor(input_template, num_rows="fixed", use_container_width=True)
+    st.dataframe(input_df)
+
+    # Discretizer jika digunakan
+    # asumsikan sudah didefinisikan: `discretizer_nbc`
+    with open('./models/BN/model_bn.pkl', 'rb') as model_file:
+        model_bn = pickle.load(model_file)
+
+    # Tombol prediksi
+    if st.button("Prediksi"):
+        # Lakukan transformasi diskritisasi
+        from pgmpy.inference import VariableElimination
+        inference = VariableElimination(model_bn)
+        evidence_dict = input_df.iloc[0].to_dict()
+        query_result = inference.query(variables=["GPA_Disc"], evidence=evidence_dict)
+        st.write(query_result)
