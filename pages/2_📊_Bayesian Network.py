@@ -311,20 +311,20 @@ if selected == "Evaluasi Model":
         st.write("#### Evaluasi Model untuk GPA (MAE, RMSE)")
         st.write(f"MAE: `{em_wosh["gpa_mae"] * 100:.2f}%`")
         st.write(f"RMSE: `{em_wosh["gpa_rmse"] * 100:.2f}%`")
-        st.write("Nilai Mean Absolute Error (MAE) sebesar `38%` menunjukkan bahwa rata-rata kesalahan prediksi terhadap GPA_Disc relatif rendah. Sementara itu, Root Mean Squared Error (RMSE) sebesar `81%` mengindikasikan bahwa secara keseluruhan prediksi model cukup akurat, meskipun terdapat beberapa kesalahan prediksi yang lebih besar.")
+        st.write("Nilai Mean Absolute Error (MAE) sebesar 0,39 menunjukkan bahwa rata-rata kesalahan prediksi terhadap GPA_Disc relatif rendah. Sementara itu, Root Mean Squared Error (RMSE) sebesar 0,82 mengindikasikan bahwa secara keseluruhan prediksi model cukup akurat, meskipun terdapat beberapa kesalahan prediksi yang lebih besar.")
 
         st.markdown("---")
         st.write("#### Evaluasi Model untuk GradeClass (Akurasi, Presisi, Recall, AUC)")
         st.write(f"Akurasi: `{em_wosh["gradeclass_akurasi"] * 100:.2f}%`")
         st.write(f"Presisi: `{em_wosh["gradeclass_presisi"] * 100:.2f}%`")
         st.write(f"Recall: `{em_wosh["gradeclass_recall"] * 100:.2f}%`")
-        st.write("Berdasarkan persentase tersebut, model berhasil memprediksi GradeClass dengan akurasi `64,30%`. Presisi sebesar `64,93%` menunjukkan bahwa prediksi `benar` model cukup konsisten. Recall `64,30%` berarti model mampu menangkap sebagian besar data dengan tepat.")
+        st.write("Berdasarkan hasil evaluasi, model berhasil memprediksi GradeClass dengan akurasi sebesar `70,98%`, yang berarti sekitar 71 dari 100 prediksi yang dilakukan oleh model sudah tepat. Presisi sebesar 70,10% menunjukkan bahwa dari semua prediksi yang diklasifikasikan ke dalam suatu kelas, sekitar 70% di antaranya benar, mencerminkan konsistensi model dalam memberikan label yang tepat. Recall sebesar `70,98%` mengindikasikan bahwa model mampu menangkap sebagian besar data yang relevan dengan cukup baik.")
 
         st.markdown("---")
         st.write("Area Under ROC Curve (AUC) untuk klasifikasi performa")
         st.write(f"GPA AUC: `{em_wosh["gpa_auc"] * 100:.2f}%`")
         st.write(f"GradeClass AUC: `{em_wosh["gradeclass_auc"] * 100:.2f}%`")
-        st.write("Berdasarkan persentase tersebut, AUC GradeClass`81%` dan AUC GPA `90%` menandakan performa klasifikasi model cukup baik untuk GradeClass dan Sangat Baik untuk GPA dalam membedakan kelas.")
+        st.write("Berdasarkan persentase tersebut, AUC GPA `89%` dan AUC GradeClass `90%` menandakan performa klasifikasi model cukup baik untuk GradeClass dan Sangat Baik untuk GPA dalam membedakan kelas.")
 
 
     if sub_selected == "Kalibrasi Probabilistik":
@@ -441,14 +441,14 @@ if selected == "Validasi Model":
         st.write(f"Cross-validation MAE untuk GPA_Disc: `{k_fold_bn["mean_mae_gpa"]:.3f}` ± `{k_fold_bn["std_mae_gpa"]:.3f}`")
         st.write(f"Cross-validation RMSE untuk GPA_Disc: `{k_fold_bn["mean_rmse_gpa"]:.3f}` ± `{k_fold_bn["std_rmse_gpa"]:.3f}`")
 
-        st.write("Hasil cross-validation menunjukkan bahwa model memiliki MAE rata-rata sebesar 0.119 dan RMSE rata-rata sebesar 0.402 untuk prediksi GPA_Disc, dengan variasi (standar deviasi) yang kecil. Ini menandakan bahwa kesalahan prediksi model relatif rendah dan stabil di berbagai lipatan data.")
+        st.write("Hasil cross-validation menunjukkan bahwa model memiliki MAE rata-rata sebesar 0.035 dengan variasi ± 0.007, dan RMSE rata-rata sebesar 0.209 dengan variasi ± 0.032 untuk prediksi GPA_Disc. Nilai ini mengindikasikan bahwa kesalahan prediksi model relatif kecil dan stabil di berbagai lipatan data, dengan variasi yang juga cukup rendah. Hal ini menunjukkan bahwa model cukup andal dalam memberikan prediksi yang konsisten dengan kesalahan yang minim.")
 
         st.markdown("---")
         st.write("### Hasil evaluasi model menggunakan K-fold cross-validation (GradeClass):")
         st.write(f"Cross-validation MAE untuk GradeClass: `{k_fold_bn["mean_mae_grade_class"]:.3f}` ± `{k_fold_bn["std_mae_grade_class"]:.3f}`")
         st.write(f"Cross-validation RMSE untuk GradeClass: `{k_fold_bn["mean_rmse_grade_class"]:.3f}` ± `{k_fold_bn["std_rmse_grade_class"]:.3f}`")
 
-        st.write("Hasil cross-validation menunjukkan MAE rata-rata 0.147 dan RMSE rata-rata 0.611 untuk prediksi GradeClass, dengan variasi yang masih cukup kecil. Ini menunjukkan bahwa model cukup konsisten, meskipun tingkat kesalahan prediksinya sedikit lebih tinggi dibandingkan prediksi GPA_Disc.")
+        st.write("Hasil cross-validation menunjukkan MAE sebesar 0.000 dan RMSE sebesar 0.000 untuk prediksi GradeClass, yang berarti tidak ada kesalahan prediksi yang terdeteksi dalam lipatan data yang diuji.")
 
 
     if sub_selected == "Sensitivity Analysis":
@@ -515,7 +515,7 @@ if selected == "Validasi Model":
         st.pyplot(plt)
 
 
-        st.write("Hasil menunjukkan bahwa perubahan prior type (BDeu atau K2) dan nilai equivalent sample size (5, 10, 20) tidak mempengaruhi MAE, yang tetap stabil di angka 0.38. Ini menandakan model cukup robust terhadap variasi parameter ini.")
+        st.write("Hasil menunjukkan bahwa perubahan prior_type (BDeu atau K2) dan nilai equivalent_sample_size (5, 10, 20) tidak mempengaruhi MAE, yang tetap stabil di angka 0.39. Hal ini menandakan bahwa model cukup robust terhadap variasi parameter ini, dengan tingkat kesalahan yang konsisten meskipun terjadi perubahan pada konfigurasi prior dan ukuran sampel.")
 
 
     # if sub_selected == "Memberi Rekomendasi":
@@ -590,14 +590,6 @@ if selected == "Validasi Model":
 
         st.pyplot(fig)
 
-        # Penjelasan Regresi
-        st.markdown(f"""
-        **Analisis:**
-        - *Bayesian Network* menghasilkan MAE sebesar `{mae_scores[0]:.2f}%` dan RMSE `{rmse_scores[0]:.2f}%`, menunjukkan performa yang cukup stabil.
-        - *Linear Regression* memiliki nilai MAE `{mae_scores[1]:.2f}%` dan RMSE `{rmse_scores[1]:.2f}%`, yang berarti kesalahan rata-rata prediksinya lebih tinggi, meskipun deviasi error-nya (RMSE) sedikit lebih kecil.
-        - Dengan performa numerik yang relatif kompetitif dan tambahan keunggulan dalam interpretabilitas serta reasoning probabilistik, Bayesian Network layak dipertimbangkan sebagai model regresi yang seimbang antara akurasi dan transparansi.
-        """)
-
         st.markdown("---")
 
         # --- 2. Perbandingan Klasifikasi (Akurasi & AUC) --- #
@@ -629,10 +621,3 @@ if selected == "Validasi Model":
         st.pyplot(fig2)
 
         # Penjelasan Klasifikasi
-        st.markdown(f"""
-        **Analisis:**
-        - *Bayesian Network* menunjukkan AUC sebesar `{auc_scores[0]:.2f}%`, sementara *Random Forest* mencetak AUC `{auc_scores[1]:.2f}%` dengan akurasi `{accuracy_scores[1]:.2f}%`.
-        - Jika interpretabilitas dan probabilistik reasoning dibutuhkan, *Bayesian Network* bisa lebih cocok.
-        - Jika tujuan utama adalah prediksi kelas secara akurat, maka Random Forest bisa menjadi pilihan yang lebih baik. 
-        - Sebaliknya, jika dibutuhkan kemampuan interpretasi probabilistik dan pemodelan hubungan antar variabel, maka Bayesian Network lebih unggul karena memberikan representasi yang lebih transparan dan explainable.
-        """)
