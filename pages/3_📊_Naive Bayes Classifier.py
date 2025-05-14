@@ -77,7 +77,7 @@ if selected == "Struktur NBC":
     st.write(target_variables)
     
     st.write()
-    st.write("#### Target Variabel")
+    st.write("#### Feature Variabel")
     # Ambil semua fitur selain target
     feature_variables = [col for col in data_nbc.columns if col not in target_variables]
     st.write(feature_variables)

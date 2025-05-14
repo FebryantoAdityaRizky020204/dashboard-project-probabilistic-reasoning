@@ -53,7 +53,13 @@ if selected == "Struktur BN":
             ('Absences', 'GPA_Disc'),
             ('GPA_Disc', 'GradeClass')
         ]
-
+    st.markdown("---")
+    with open("./data/data_bn_split_info.json", "r") as f:
+        loaded_info_bn_fs = json.load(f)
+    
+    st.write("### Kolom Yang Dipakai")
+    st.write(loaded_info_bn_fs["column_use"])
+    
     st.markdown("---")
     st.write("Visualisasi Struktur Bayesian Network")
     # Membuat Directed Graph dari edges yang sudah didefinisikan
